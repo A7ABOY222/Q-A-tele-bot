@@ -114,6 +114,8 @@ class RewardsCog(commands.Cog, name="Rewards"):
         ach_cog = self.bot.get_cog("Achievements")
         if ach_cog:
             await ach_cog.check_streak_achievements(interaction.user, guild_id, streak)
+            updated_user = await self.bot.db.get_user(user_id, guild_id)
+            await ach_cog.check_coins_achievements(interaction.user, guild_id, updated_user["coins"])
 
     @app_commands.command(name="weekly", description="Claim your weekly coin reward")
     async def weekly(self, interaction: discord.Interaction) -> None:
@@ -143,6 +145,11 @@ class RewardsCog(commands.Cog, name="Rewards"):
         )
         await interaction.response.send_message(embed=embed)
 
+        ach_cog = self.bot.get_cog("Achievements")
+        if ach_cog:
+            updated_user = await self.bot.db.get_user(user_id, guild_id)
+            await ach_cog.check_coins_achievements(interaction.user, guild_id, updated_user["coins"])
+
     @app_commands.command(name="monthly", description="Claim your monthly coin reward")
     async def monthly(self, interaction: discord.Interaction) -> None:
         user_id = str(interaction.user.id)
@@ -170,6 +177,11 @@ class RewardsCog(commands.Cog, name="Rewards"):
             color=self.bot.config.COLOR_SUCCESS,
         )
         await interaction.response.send_message(embed=embed)
+
+        ach_cog = self.bot.get_cog("Achievements")
+        if ach_cog:
+            updated_user = await self.bot.db.get_user(user_id, guild_id)
+            await ach_cog.check_coins_achievements(interaction.user, guild_id, updated_user["coins"])
 
 
 async def setup(bot: commands.Bot) -> None:

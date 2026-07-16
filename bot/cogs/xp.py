@@ -104,6 +104,14 @@ class XPCog(commands.Cog, name="XP"):
         # Invalidate user cache
         self.bot.cache.invalidate_user(user_id, guild_id)
 
+        # Check message-count achievements
+        achievements_cog = self.bot.get_cog("Achievements")
+        if achievements_cog:
+            refreshed = await self.bot.db.get_user(user_id, guild_id)
+            await achievements_cog.check_message_achievements(
+                message.author, guild_id, refreshed["messages"]
+            )
+
     async def _handle_level_up(
         self,
         message: discord.Message,
@@ -235,14 +243,22 @@ class XPCog(commands.Cog, name="XP"):
                     updated = await self.bot.db.add_xp(user_id, guild_id, xp_gain, week, month)
 
                     # Add voice minutes
+                    new_voice_minutes = user["voice_minutes"] + 1
                     await self.bot.db.update_user(
-                        user_id, guild_id, voice_minutes=user["voice_minutes"] + 1
+                        user_id, guild_id, voice_minutes=new_voice_minutes
                     )
 
                     # Check level-up
                     new_level, _, _ = calculate_level(updated["total_xp"])
                     if new_level > old_level:
                         await self.bot.db.update_user(user_id, guild_id, level=new_level)
+
+                    # Check voice achievements
+                    achievements_cog = self.bot.get_cog("Achievements")
+                    if achievements_cog:
+                        await achievements_cog.check_voice_achievements(
+                            member, guild_id, new_voice_minutes
+                        )
 
                     self.bot.cache.invalidate_user(user_id, guild_id)
 

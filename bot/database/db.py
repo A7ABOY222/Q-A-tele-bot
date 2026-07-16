@@ -428,13 +428,14 @@ class DatabaseManager:
     ) -> bool:
         """Unlock an achievement. Returns True if it was newly unlocked."""
         try:
-            await self.db.execute(
+            async with self.db.execute(
                 """INSERT OR IGNORE INTO user_achievements (user_id, guild_id, achievement_id)
                    VALUES (?, ?, ?)""",
                 (user_id, guild_id, achievement_id),
-            )
+            ) as cur:
+                inserted = cur.rowcount == 1
             await self.db.commit()
-            return self.db.total_changes > 0
+            return inserted
         except Exception as exc:
             logger.error("Failed to unlock achievement: %s", exc)
             return False
