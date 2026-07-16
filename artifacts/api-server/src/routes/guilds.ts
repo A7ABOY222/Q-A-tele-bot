@@ -25,6 +25,50 @@ function requireAuth(req: Request, res: Response, next: NextFunction): void {
   next();
 }
 
+/**
+ * Guild membership guard — must be used on all guild-scoped routes.
+ * Verifies the authenticated user is actually a member of the target guild
+ * before forwarding to the bot proxy, preventing IDOR across guilds.
+ */
+async function requireGuildMember(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const session = (req as any).session;
+  const { guildId } = req.params;
+
+  if (!guildId) {
+    next();
+    return;
+  }
+
+  try {
+    const guildsRes = await fetch("https://discord.com/api/v10/users/@me/guilds", {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    });
+
+    if (!guildsRes.ok) {
+      logger.warn({ userId: session.userId, status: guildsRes.status }, "Failed to fetch user guilds from Discord");
+      res.status(502).json({ error: "Could not verify guild membership" });
+      return;
+    }
+
+    const userGuilds = (await guildsRes.json()) as Array<{ id: string }>;
+    const isMember = userGuilds.some((g) => g.id === guildId);
+
+    if (!isMember) {
+      res.status(403).json({ error: "You are not a member of this guild" });
+      return;
+    }
+
+    next();
+  } catch (err) {
+    logger.error({ err, guildId }, "Guild membership check failed");
+    res.status(502).json({ error: "Could not verify guild membership" });
+  }
+}
+
 // ── Bot API proxy helper ──────────────────────────────────────────────────
 
 async function botFetch(
@@ -58,6 +102,10 @@ async function proxyGet(
     res.status(503).json({ error: "Bot API unavailable. Is the bot running?" });
   }
 }
+
+// ── Automatically enforce guild membership on every /:guildId route ──────
+// router.param fires before the route handler whenever :guildId appears.
+router.param("guildId", requireGuildMember as any);
 
 // ── GET /api/guilds — list user's guilds ─────────────────────────────────
 
