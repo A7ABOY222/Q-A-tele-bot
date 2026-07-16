@@ -3,13 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Server Levels+ Dashboard API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Discord OAuth authentication
+  - name: guilds
+    description: Discord server management
+  - name: leaderboard
+    description: Leaderboard data
+  - name: members
+    description: Guild member management
+  - name: settings
+    description: Server configuration
+  - name: shop
+    description: Economy shop
 paths:
   /healthz:
     get:
@@ -24,6 +36,402 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Authenticated user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /guilds:
+    get:
+      operationId: getGuilds
+      tags: [guilds]
+      summary: Get user's guilds where bot is present
+      responses:
+        "200":
+          description: List of guilds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Guild"
+
+  /guilds/{guildId}:
+    get:
+      operationId: getGuild
+      tags: [guilds]
+      summary: Get a specific guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guild"
+        "404":
+          description: Guild not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /guilds/{guildId}/stats:
+    get:
+      operationId: getGuildStats
+      tags: [guilds]
+      summary: Get guild activity stats summary
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildStats"
+
+  /guilds/{guildId}/settings:
+    get:
+      operationId: getGuildSettings
+      tags: [settings]
+      summary: Get guild bot settings
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Guild settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildSettings"
+    put:
+      operationId: updateGuildSettings
+      tags: [settings]
+      summary: Update guild bot settings
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuildSettingsInput"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildSettings"
+
+  /guilds/{guildId}/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get guild XP leaderboard
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [xp, messages, voice, coins, weekly, monthly]
+            default: xp
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardPage"
+
+  /guilds/{guildId}/members:
+    get:
+      operationId: getGuildMembers
+      tags: [members]
+      summary: Get guild members with their stats
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Guild members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberPage"
+
+  /guilds/{guildId}/members/{userId}:
+    get:
+      operationId: getMember
+      tags: [members]
+      summary: Get a specific guild member profile
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberProfile"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /guilds/{guildId}/members/{userId}/xp:
+    post:
+      operationId: modifyMemberXp
+      tags: [members]
+      summary: Add or remove XP from a member (admin)
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/XpModification"
+      responses:
+        "200":
+          description: XP modified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /guilds/{guildId}/members/{userId}/reset:
+    post:
+      operationId: resetMember
+      tags: [members]
+      summary: Reset a member's XP, coins, and stats (admin)
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /guilds/{guildId}/level-roles:
+    get:
+      operationId: getLevelRoles
+      tags: [settings]
+      summary: Get level-up role assignments
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Level roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LevelRole"
+    post:
+      operationId: createLevelRole
+      tags: [settings]
+      summary: Create a level role assignment
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LevelRoleInput"
+      responses:
+        "201":
+          description: Level role created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LevelRole"
+
+  /guilds/{guildId}/level-roles/{level}:
+    delete:
+      operationId: deleteLevelRole
+      tags: [settings]
+      summary: Delete a level role assignment
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: level
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Level role deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /guilds/{guildId}/activity:
+    get:
+      operationId: getGuildActivity
+      tags: [guilds]
+      summary: Get recent guild activity feed
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
+  /guilds/{guildId}/shop:
+    get:
+      operationId: getShopItems
+      tags: [shop]
+      summary: Get shop items available for this guild
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shop items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopItem"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +442,424 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        discriminator:
+          type: string
+        avatar:
+          type: ["string", "null"]
+        avatarUrl:
+          type: string
+      required:
+        - id
+        - username
+        - discriminator
+        - avatarUrl
+
+    Guild:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        icon:
+          type: ["string", "null"]
+        iconUrl:
+          type: ["string", "null"]
+        memberCount:
+          type: integer
+        botPresent:
+          type: boolean
+        isAdmin:
+          type: boolean
+      required:
+        - id
+        - name
+        - memberCount
+        - botPresent
+        - isAdmin
+
+    GuildStats:
+      type: object
+      properties:
+        totalMembers:
+          type: integer
+        activeToday:
+          type: integer
+        messagesThisWeek:
+          type: integer
+        voiceMinutesThisWeek:
+          type: integer
+        totalXpAwarded:
+          type: integer
+        levelUpsThisWeek:
+          type: integer
+        topLevel:
+          type: integer
+        avgLevel:
+          type: number
+      required:
+        - totalMembers
+        - activeToday
+        - messagesThisWeek
+        - voiceMinutesThisWeek
+        - totalXpAwarded
+        - levelUpsThisWeek
+        - topLevel
+        - avgLevel
+
+    GuildSettings:
+      type: object
+      properties:
+        guildId:
+          type: string
+        xpPerMessage:
+          type: integer
+        xpCooldown:
+          type: integer
+        xpMultiplier:
+          type: number
+        maxLevel:
+          type: integer
+        dailyXpCap:
+          type: integer
+        announceChannel:
+          type: ["string", "null"]
+        announceMessage:
+          type: string
+        stackRoles:
+          type: boolean
+        ignoredChannels:
+          type: array
+          items:
+            type: string
+        ignoredRoles:
+          type: array
+          items:
+            type: string
+        voiceXpEnabled:
+          type: boolean
+        coinsEnabled:
+          type: boolean
+        prestigeEnabled:
+          type: boolean
+      required:
+        - guildId
+        - xpPerMessage
+        - xpCooldown
+        - xpMultiplier
+        - maxLevel
+        - dailyXpCap
+        - announceMessage
+        - stackRoles
+        - ignoredChannels
+        - ignoredRoles
+        - voiceXpEnabled
+        - coinsEnabled
+        - prestigeEnabled
+
+    GuildSettingsInput:
+      type: object
+      properties:
+        xpPerMessage:
+          type: integer
+        xpCooldown:
+          type: integer
+        xpMultiplier:
+          type: number
+        maxLevel:
+          type: integer
+        dailyXpCap:
+          type: integer
+        announceChannel:
+          type: ["string", "null"]
+        announceMessage:
+          type: string
+        stackRoles:
+          type: boolean
+        ignoredChannels:
+          type: array
+          items:
+            type: string
+        ignoredRoles:
+          type: array
+          items:
+            type: string
+        voiceXpEnabled:
+          type: boolean
+        coinsEnabled:
+          type: boolean
+        prestigeEnabled:
+          type: boolean
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: string
+        username:
+          type: string
+        discriminator:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        level:
+          type: integer
+        xp:
+          type: integer
+        totalXp:
+          type: integer
+        messages:
+          type: integer
+        voiceMinutes:
+          type: integer
+        coins:
+          type: integer
+        prestige:
+          type: integer
+      required:
+        - rank
+        - userId
+        - username
+        - discriminator
+        - level
+        - xp
+        - totalXp
+        - messages
+        - voiceMinutes
+        - coins
+        - prestige
+
+    LeaderboardPage:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - entries
+        - total
+        - page
+        - totalPages
+
+    MemberProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+        guildId:
+          type: string
+        username:
+          type: string
+        discriminator:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        level:
+          type: integer
+        xp:
+          type: integer
+        totalXp:
+          type: integer
+        xpNeeded:
+          type: integer
+        rank:
+          type: integer
+        messages:
+          type: integer
+        voiceMinutes:
+          type: integer
+        coins:
+          type: integer
+        prestige:
+          type: integer
+        joinedAt:
+          type: string
+        bio:
+          type: ["string", "null"]
+        achievements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Achievement"
+        badges:
+          type: array
+          items:
+            type: string
+      required:
+        - userId
+        - guildId
+        - username
+        - discriminator
+        - level
+        - xp
+        - totalXp
+        - xpNeeded
+        - rank
+        - messages
+        - voiceMinutes
+        - coins
+        - prestige
+        - achievements
+        - badges
+
+    MemberPage:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberProfile"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - members
+        - total
+        - page
+        - totalPages
+
+    Achievement:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        unlockedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - description
+        - icon
+
+    LevelRole:
+      type: object
+      properties:
+        guildId:
+          type: string
+        level:
+          type: integer
+        roleId:
+          type: string
+        roleName:
+          type: string
+      required:
+        - guildId
+        - level
+        - roleId
+        - roleName
+
+    LevelRoleInput:
+      type: object
+      properties:
+        level:
+          type: integer
+        roleId:
+          type: string
+      required:
+        - level
+        - roleId
+
+    XpModification:
+      type: object
+      properties:
+        amount:
+          type: integer
+        action:
+          type: string
+          enum: [add, remove, set]
+      required:
+        - amount
+        - action
+
+    ActivityEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [level_up, achievement, prestige, daily_reward, weekly_reward]
+        userId:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        level:
+          type: ["integer", "null"]
+        achievement:
+          type: ["string", "null"]
+        timestamp:
+          type: string
+      required:
+        - id
+        - type
+        - userId
+        - username
+        - timestamp
+
+    ShopItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [background, frame, color, boost, decoration]
+        price:
+          type: integer
+        icon:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - category
+        - price
+        - icon

@@ -1,0 +1,100 @@
+{
+  "bg_space": {
+    "name": "Space Background",
+    "description": "A stunning galaxy background for your rank card",
+    "category": "background",
+    "price": 2500,
+    "icon": "🌌"
+  },
+  "bg_ocean": {
+    "name": "Ocean Wave",
+    "description": "A calming ocean-themed rank card background",
+    "category": "background",
+    "price": 2000,
+    "icon": "🌊"
+  },
+  "bg_forest": {
+    "name": "Enchanted Forest",
+    "description": "A lush forest background for your card",
+    "category": "background",
+    "price": 1500,
+    "icon": "🌲"
+  },
+  "bg_neon": {
+    "name": "Neon City",
+    "description": "Cyberpunk neon city background",
+    "category": "background",
+    "price": 3000,
+    "icon": "🏙"
+  },
+  "frame_gold": {
+    "name": "Gold Frame",
+    "description": "A luxurious gold avatar frame",
+    "category": "frame",
+    "price": 3500,
+    "icon": "🟡"
+  },
+  "frame_diamond": {
+    "name": "Diamond Frame",
+    "description": "A shimmering diamond avatar frame",
+    "category": "frame",
+    "price": 5000,
+    "icon": "💎"
+  },
+  "frame_fire": {
+    "name": "Fire Frame",
+    "description": "An animated fire avatar frame",
+    "category": "frame",
+    "price": 4000,
+    "icon": "🔥"
+  },
+  "color_red": {
+    "name": "Red Username",
+    "description": "Change your username color to red on the rank card",
+    "category": "color",
+    "price": 1000,
+    "icon": "🔴"
+  },
+  "color_purple": {
+    "name": "Purple Username",
+    "description": "Change your username color to purple",
+    "category": "color",
+    "price": 1000,
+    "icon": "🟣"
+  },
+  "color_gold": {
+    "name": "Gold Username",
+    "description": "Change your username color to gold",
+    "category": "color",
+    "price": 2000,
+    "icon": "🌟"
+  },
+  "boost_2x": {
+    "name": "2× XP Boost (24h)",
+    "description": "Double your XP gains for 24 hours",
+    "category": "boost",
+    "price": 5000,
+    "icon": "⚡"
+  },
+  "boost_15x": {
+    "name": "1.5× XP Boost (48h)",
+    "description": "1.5× XP gains for 48 hours",
+    "category": "boost",
+    "price": 3500,
+    "icon": "🚀"
+  },
+  "deco_crown": {
+    "name": "Crown Decoration",
+    "description": "A regal crown decoration for your profile",
+    "category": "decoration",
+    "price": 4500,
+    "icon": "👑"
+  },
+  "deco_wings": {
+    "name": "Angel Wings",
+    "description": "Add angel wings to your rank card",
+    "category": "decoration",
+    "price": 4000,
+    "icon": "🪽"
+  }
+}
