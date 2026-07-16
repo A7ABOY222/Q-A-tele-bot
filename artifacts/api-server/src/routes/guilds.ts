@@ -30,7 +30,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction): void {
 async function botFetch(
   path: string,
   options: RequestInit = {}
-): Promise<Response> {
+): Promise<globalThis.Response> {
   const url = `${BOT_API_URL}${path}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -123,7 +123,7 @@ router.get("/:guildId/members", requireAuth, async (req: Request, res: Response)
     const botRes = await botFetch(
       `/guilds/${req.params.guildId}/leaderboard?page=${page}&limit=20`
     );
-    const data = await botRes.json();
+    const data = await botRes.json() as any;
     res.json({
       members: (data.entries ?? []).map((e: any) => ({
         ...e,
