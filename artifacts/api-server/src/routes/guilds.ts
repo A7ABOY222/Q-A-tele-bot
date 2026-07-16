@@ -26,9 +26,11 @@ function requireAuth(req: Request, res: Response, next: NextFunction): void {
 }
 
 /**
- * Guild membership guard — must be used on all guild-scoped routes.
- * Verifies the authenticated user is actually a member of the target guild
- * before forwarding to the bot proxy, preventing IDOR across guilds.
+ * Guild membership guard — place after requireAuth on every guild-scoped route.
+ * Verifies the authenticated user is a member of the target guild by calling
+ * Discord's /users/@me/guilds with the session's access token, preventing IDOR.
+ *
+ * Must run after requireAuth so req.session is populated.
  */
 async function requireGuildMember(
   req: Request,
@@ -36,8 +38,14 @@ async function requireGuildMember(
   next: NextFunction
 ): Promise<void> {
   const session = (req as any).session;
-  const { guildId } = req.params;
 
+  // Defensive: if session is missing (called out of order), reject with 401
+  if (!session) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const { guildId } = req.params;
   if (!guildId) {
     next();
     return;
@@ -49,7 +57,10 @@ async function requireGuildMember(
     });
 
     if (!guildsRes.ok) {
-      logger.warn({ userId: session.userId, status: guildsRes.status }, "Failed to fetch user guilds from Discord");
+      logger.warn(
+        { userId: session.userId, status: guildsRes.status },
+        "Failed to fetch user guilds from Discord"
+      );
       res.status(502).json({ error: "Could not verify guild membership" });
       return;
     }
@@ -103,10 +114,6 @@ async function proxyGet(
   }
 }
 
-// ── Automatically enforce guild membership on every /:guildId route ──────
-// router.param fires before the route handler whenever :guildId appears.
-router.param("guildId", requireGuildMember as any);
-
 // ── GET /api/guilds — list user's guilds ─────────────────────────────────
 
 router.get("/", requireAuth, async (req: Request, res: Response) => {
@@ -123,25 +130,25 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
 // ── GET /api/guilds/:id ──────────────────────────────────────────────────
 
-router.get("/:guildId", requireAuth, async (req: Request, res: Response) => {
+router.get("/:guildId", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   await proxyGet(req, res, `/guilds/${req.params.guildId}`);
 });
 
 // ── GET /api/guilds/:id/stats ────────────────────────────────────────────
 
-router.get("/:guildId/stats", requireAuth, async (req: Request, res: Response) => {
+router.get("/:guildId/stats", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   await proxyGet(req, res, `/guilds/${req.params.guildId}/stats`);
 });
 
 // ── GET /api/guilds/:id/settings ─────────────────────────────────────────
 
-router.get("/:guildId/settings", requireAuth, async (req: Request, res: Response) => {
+router.get("/:guildId/settings", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   await proxyGet(req, res, `/guilds/${req.params.guildId}/settings`);
 });
 
 // ── PUT /api/guilds/:id/settings ─────────────────────────────────────────
 
-router.put("/:guildId/settings", requireAuth, async (req: Request, res: Response) => {
+router.put("/:guildId/settings", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   try {
     const botRes = await botFetch(`/guilds/${req.params.guildId}/settings`, {
       method: "PUT",
@@ -157,15 +164,15 @@ router.put("/:guildId/settings", requireAuth, async (req: Request, res: Response
 
 // ── GET /api/guilds/:id/leaderboard ──────────────────────────────────────
 
-router.get("/:guildId/leaderboard", requireAuth, async (req: Request, res: Response) => {
+router.get("/:guildId/leaderboard", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   const { type = "xp", page = "1", limit = "20" } = req.query as Record<string, string>;
   await proxyGet(req, res, `/guilds/${req.params.guildId}/leaderboard?type=${type}&page=${page}&limit=${limit}`);
 });
 
 // ── GET /api/guilds/:id/members ──────────────────────────────────────────
 
-router.get("/:guildId/members", requireAuth, async (req: Request, res: Response) => {
-  const { page = "1", search = "" } = req.query as Record<string, string>;
+router.get("/:guildId/members", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
+  const { page = "1" } = req.query as Record<string, string>;
   // Return leaderboard as member list (search isn't implemented in bot API yet)
   try {
     const botRes = await botFetch(
@@ -193,13 +200,13 @@ router.get("/:guildId/members", requireAuth, async (req: Request, res: Response)
 
 // ── GET /api/guilds/:id/members/:userId ──────────────────────────────────
 
-router.get("/:guildId/members/:userId", requireAuth, async (req: Request, res: Response) => {
+router.get("/:guildId/members/:userId", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   await proxyGet(req, res, `/guilds/${req.params.guildId}/members/${req.params.userId}`);
 });
 
 // ── POST /api/guilds/:id/members/:userId/xp ──────────────────────────────
 
-router.post("/:guildId/members/:userId/xp", requireAuth, async (req: Request, res: Response) => {
+router.post("/:guildId/members/:userId/xp", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   try {
     const botRes = await botFetch(
       `/guilds/${req.params.guildId}/members/${req.params.userId}/xp`,
@@ -213,7 +220,7 @@ router.post("/:guildId/members/:userId/xp", requireAuth, async (req: Request, re
 
 // ── POST /api/guilds/:id/members/:userId/reset ────────────────────────────
 
-router.post("/:guildId/members/:userId/reset", requireAuth, async (req: Request, res: Response) => {
+router.post("/:guildId/members/:userId/reset", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   try {
     const botRes = await botFetch(
       `/guilds/${req.params.guildId}/members/${req.params.userId}/reset`,
@@ -227,11 +234,11 @@ router.post("/:guildId/members/:userId/reset", requireAuth, async (req: Request,
 
 // ── Level roles ────────────────────────────────────────────────────────────
 
-router.get("/:guildId/level-roles", requireAuth, async (req: Request, res: Response) => {
+router.get("/:guildId/level-roles", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   await proxyGet(req, res, `/guilds/${req.params.guildId}/level-roles`);
 });
 
-router.post("/:guildId/level-roles", requireAuth, async (req: Request, res: Response) => {
+router.post("/:guildId/level-roles", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   try {
     const botRes = await botFetch(`/guilds/${req.params.guildId}/level-roles`, {
       method: "POST",
@@ -243,7 +250,7 @@ router.post("/:guildId/level-roles", requireAuth, async (req: Request, res: Resp
   }
 });
 
-router.delete("/:guildId/level-roles/:level", requireAuth, async (req: Request, res: Response) => {
+router.delete("/:guildId/level-roles/:level", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   try {
     const botRes = await botFetch(
       `/guilds/${req.params.guildId}/level-roles/${req.params.level}`,
@@ -257,14 +264,14 @@ router.delete("/:guildId/level-roles/:level", requireAuth, async (req: Request, 
 
 // ── Activity ──────────────────────────────────────────────────────────────
 
-router.get("/:guildId/activity", requireAuth, async (req: Request, res: Response) => {
+router.get("/:guildId/activity", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   const { limit = "20" } = req.query as Record<string, string>;
   await proxyGet(req, res, `/guilds/${req.params.guildId}/activity?limit=${limit}`);
 });
 
 // ── Shop ──────────────────────────────────────────────────────────────────
 
-router.get("/:guildId/shop", requireAuth, async (req: Request, res: Response) => {
+router.get("/:guildId/shop", requireAuth, requireGuildMember, async (req: Request, res: Response) => {
   await proxyGet(req, res, `/guilds/${req.params.guildId}/shop`);
 });
 
