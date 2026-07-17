@@ -1,0 +1,10 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "./start.sh"
+restartPolicyType = "always"
+
+# Set MEMORY env var in Railway dashboard to control heap size (in MB).
+# Default is 1536 (1.5GB). Match it to your Railway plan's RAM limit.
