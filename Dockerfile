@@ -18,9 +18,6 @@ COPY server.properties server.properties
 COPY start.sh start.sh
 RUN chmod +x start.sh
 
-# World data lives on a persistent volume — mount it at /minecraft/world
-VOLUME ["/minecraft/world", "/minecraft/plugins", "/minecraft/logs"]
-
 # Minecraft port
 EXPOSE 25565
 
